@@ -1,4 +1,4 @@
-// Lắng nghe message từ popup
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'extractInfo') {
     try {
@@ -19,14 +19,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 function extractProfileInfo() {
-  // Cách 1: Lấy username từ URL
+
   let username = '';
   const urlMatch = window.location.pathname.match(/^\/([^\/]+)/);
   if (urlMatch) {
     username = urlMatch[1];
   }
   
-  // Cách 2: Nếu không có từ URL, tìm trong header
+ 
   if (!username) {
     const headerSpans = document.querySelectorAll('header span');
     for (const span of headerSpans) {
@@ -46,10 +46,9 @@ function extractProfileInfo() {
   let followers = '0';
   let following = '0';
   
-  // Tìm tất cả elements trong header chứa số và từ khóa
+  
   const headerText = document.querySelector('header')?.innerText || '';
   
-  // Tìm theo pattern: "số + từ khóa"
   const postMatch = headerText.match(/(\d+[\d,\.KMB]*)\s*post/i);
   const followerMatch = headerText.match(/(\d+[\d,\.KMB]*)\s*follower/i);
   const followingMatch = headerText.match(/(\d+[\d,\.KMB]*)\s*following/i);
@@ -58,7 +57,7 @@ function extractProfileInfo() {
   if (followerMatch) followers = followerMatch[1].replace(/,/g, '');
   if (followingMatch) following = followingMatch[1].replace(/,/g, '');
   
-  // Nếu không tìm thấy bằng regex, thử tìm trong các li elements
+
   if (posts === '0' || followers === '0' || following === '0') {
     const listItems = document.querySelectorAll('header ul li, header section ul li');
     
@@ -89,66 +88,77 @@ function extractProfileInfo() {
 }
 
 function fillBirthdayFields() {
-  // Tìm các select cho Month, Day, Year
-  const selects = document.querySelectorAll('select[title]');
+  window.close();
+  const monthSelect = document.querySelector('select[title="Month:"]');
+  const daySelect = document.querySelector('select[title="Day:"]');
+  const yearSelect = document.querySelector('select[title="Year:"]');
   
-  if (selects.length < 3) {
-    throw new Error('Không tìm thấy các trường ngày sinh. Vui lòng mở trang đăng ký Instagram.');
+
+  if (!monthSelect || !daySelect || !yearSelect) {
+    throw new Error('Không tìm thấy đủ trường ngày sinh');
   }
   
-  // Tạo random date
-  const randomMonth = Math.floor(Math.random() * 12) + 1; // 1-12
-  const randomDay = Math.floor(Math.random() * 28) + 1;   // 1-28 (để safe với tất cả tháng)
-  const randomYear = Math.floor(Math.random() * (1989 - 1950 + 1)) + 1950; // 1950-1989
+  console.log('✓ Đã tìm thấy đủ 3 trường');
   
-  // Điền vào các select
-  let monthSelect = null;
-  let daySelect = null;
-  let yearSelect = null;
+  const randomMonth = Math.floor(Math.random() * 12) + 1;
+  const randomDay = Math.floor(Math.random() * 28) + 1;
+ const randomYear = Math.floor(Math.random() * (1990 - 1960 + 1)) + 1960;
+
   
-  for (const select of selects) {
-    const title = select.getAttribute('title').toLowerCase();
-    
-    if (title.includes('month')) {
-      monthSelect = select;
-    } else if (title.includes('day')) {
-      daySelect = select;
-    } else if (title.includes('year')) {
-      yearSelect = select;
-    }
-  }
+  console.log('Random date: ' + randomDay + '/' + randomMonth + '/' + randomYear);
   
-  if (monthSelect && daySelect && yearSelect) {
-    // Set values
-    monthSelect.value = randomMonth.toString();
-    daySelect.value = randomDay.toString();
-    yearSelect.value = randomYear.toString();
-    
-    // Trigger change events để Instagram nhận thấy
-    monthSelect.dispatchEvent(new Event('change', { bubbles: true }));
-    daySelect.dispatchEvent(new Event('change', { bubbles: true }));
-    yearSelect.dispatchEvent(new Event('change', { bubbles: true }));
-    
-    // Tìm và bấm nút Next
-    setTimeout(() => {
-      const nextButton = document.querySelector('[role="button"][tabindex="0"]');
-      if (nextButton) {
-        const buttonText = nextButton.textContent.trim().toLowerCase();
-        if (buttonText === 'next') {
-          nextButton.click();
-        } else {
-          // Tìm button có text "Next"
+
+  const setSelectValue = (select, value, fieldName) => {
+    return new Promise((resolve) => {
+      select.focus();
+      select.value = value.toString();
+      select.dispatchEvent(new Event('input', { bubbles: true }));
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      select.dispatchEvent(new Event('blur', { bubbles: true }));
+      console.log('✓ Đã set ' + fieldName + ' = ' + value);
+      setTimeout(resolve, 300);
+    });
+  };
+  
+
+  setSelectValue(monthSelect, randomMonth, 'Month')
+    .then(() => setSelectValue(daySelect, randomDay, 'Day'))
+    .then(() => setSelectValue(yearSelect, randomYear, 'Year'))
+    .then(() => {
+      console.log('✓ Hoàn thành điền tất cả fields');
+      
+      return new Promise((resolve) => {
+        setTimeout(() => {
           const allButtons = document.querySelectorAll('[role="button"]');
+          
           for (const btn of allButtons) {
             if (btn.textContent.trim() === 'Next') {
+              console.log('✓ Bấm nút Next');
               btn.click();
               break;
             }
           }
-        }
-      }
-    }, 500);
-  } else {
-    throw new Error('Không tìm thấy đủ trường ngày sinh (Month, Day, Year)');
-  }
+          resolve();
+        }, 1000);
+      });
+    })
+    .then(() => {
+    
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          const yesButton = document.querySelector('button._a9--._ap36._asz1');
+          
+          if (yesButton && yesButton.textContent.trim() === 'Yes') {
+            console.log('✓ Bấm nút Yes');
+            yesButton.click();
+          } else {
+            console.warn('⚠ Không tìm thấy nút Yes (có thể chưa hiện)');
+          }
+          resolve();
+        }, 1500);
+      });
+    })
+    .then(() => {
+      console.log('✓ Hoàn thành toàn bộ flow!');
+    });
 }

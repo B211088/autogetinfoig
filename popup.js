@@ -7,32 +7,30 @@ document.getElementById('extractBtn').addEventListener('click', async () => {
   status.className = 'info show';
   
   try {
-    // Lấy tab hiện tại
+
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     
     if (!tab.url.includes('instagram.com')) {
       throw new Error('Vui lòng mở trang Instagram profile');
     }
     
-    // Lấy thông tin từ content script
+
     const response = await chrome.tabs.sendMessage(tab.id, { action: 'extractInfo' });
     
     if (!response.success) {
       throw new Error(response.error || 'Không thể lấy thông tin');
     }
     
-    // Lấy cookies - thử nhiều cách để tương thích Win 11
+
     let cookies = [];
     try {
-      // Thử lấy từ .instagram.com
+
       cookies = await chrome.cookies.getAll({ domain: '.instagram.com' });
       
-      // Nếu không có cookie, thử lấy từ instagram.com
       if (cookies.length === 0) {
         cookies = await chrome.cookies.getAll({ domain: 'instagram.com' });
       }
       
-      // Nếu vẫn không có, thử lấy từ URL hiện tại
       if (cookies.length === 0) {
         cookies = await chrome.cookies.getAll({ url: tab.url });
       }
@@ -42,16 +40,15 @@ document.getElementById('extractBtn').addEventListener('click', async () => {
     
     const cookieJson = JSON.stringify(cookies);
     
-    // Format output
+  
     const output = `${response.data.username}|${response.data.posts} posts|${response.data.followers} followers|${response.data.following} follwing|${cookieJson}`;
-    
-    // Copy to clipboard
+  
     await navigator.clipboard.writeText(output);
     
     status.textContent = '✅ Đã copy vào clipboard!';
     status.className = 'success show';
     
-    // Tự động ẩn sau 3 giây
+
     setTimeout(() => {
       status.className = status.className.replace('show', '');
     }, 3000);
@@ -72,7 +69,7 @@ function generatePassword() {
 
   let pw = "";
 
-  // đảm bảo các loại ký tự
+
   pw += special;
   pw += lower[Math.floor(Math.random() * lower.length)];
   pw += upper[Math.floor(Math.random() * upper.length)];
@@ -156,7 +153,7 @@ function clearPassword() {
   showNotification('Đã xóa password đã lưu!');
 }
 
-// Attach event listeners for password buttons
+
 document.addEventListener('DOMContentLoaded', () => {
   loadSavedPassword();
   document.getElementById('resetPassBtn').addEventListener('click', generatePassword);
@@ -166,4 +163,16 @@ document.addEventListener('DOMContentLoaded', () => {
   if (clearBtn) {
     clearBtn.addEventListener('click', clearPassword);
   }
+  
+
+  document.getElementById('fillBirthdayBtn').addEventListener('click', async () => {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      await chrome.tabs.sendMessage(tab.id, { action: 'fillBirthday' });
+      showNotification('✅ Đã điền ngày sinh & bấm Next!');
+    } catch (error) {
+      console.error('Error:', error);
+      showNotification('❌ Lỗi: ' + error.message);
+    }
+  });
 });
